@@ -9,7 +9,7 @@ from rwslib.builders.constants import GranularityType
 from xml.etree import cElementTree as ET
 
 import uuid
-import datetime, time
+import datetime
 
 class ODM(ODMElement):
     """Models the ODM object"""
