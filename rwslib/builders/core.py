@@ -9,20 +9,32 @@ from rwslib.builders.constants import GranularityType
 from xml.etree import cElementTree as ET
 
 import uuid
-
+import datetime, time
 
 class ODM(ODMElement):
     """Models the ODM object"""
     FILETYPE_TRANSACTIONAL = 'Transactional'
     FILETYPE_SNAPSHOT = 'Snapshot'
+    VALID_ODM_VERSIONS = ("1.2", "1.2.1", "1.3", "1.3.1", "1.3.2")
 
-    def __init__(self, originator, description="",
+    def __init__(self,
+                 originator, description="",
                  creationdatetime=None,
                  fileoid=None,
                  filetype=None,
                  granularity=GranularityType.AllClinicalData,
-                 source_system=None, source_system_version=None):
+                 source_system=None,
+                 source_system_version=None,
+                 odm_version=None,
+                 as_of_datetime=None):
         """
+        :param GranularityType granularity: Specify the GranularityType attribute for this ODM File
+        :param str odm_version: Specify the ODMVersion attribute for this ODM File (default is "1.3",
+            should be one of "1.2", "1.2.1", "1.3", "1.3.1", "1.3.2"
+        :param Union[datetime.datetime, datetime.date] as_of_datetime: Specify the AsOfDateTime attribute for this ODM File
+        :param GranularityType granularity: Specify the GranularityType attribute for this ODM File
+        :param str source_system: Name of the SourceSystem that generated this file
+        :param str source_system_version: Version of the SourceSystem that generated this file
         :param str originator: The organization that generated the ODM file.
         :param str description: The sender should use the Description attribute to record any information that will 
             help the receiver interpret the document correctly.
@@ -50,8 +62,37 @@ class ODM(ODMElement):
         # Create unique fileoid if none given
         self.fileoid = str(uuid.uuid4()) if fileoid is None else fileoid
         self._granularity_type = None
+        self._odm_version = "1.3"
+        self._as_of_datetime = None
         if granularity:
             self.granularity_type = granularity
+        if odm_version:
+            self.odm_version = odm_version
+        if as_of_datetime:
+            self.as_of_datetime = as_of_datetime
+
+    @property
+    def odm_version(self):
+        return self._odm_version
+
+    @odm_version.setter
+    def odm_version(self, value):
+        # TODO: should we warn for values not supported by RWS?
+        if not value in self.VALID_ODM_VERSIONS:
+            raise ValueError("No such supported ODMVersion '%s'" % value)
+        self._odm_version = value
+
+    @property
+    def as_of_datetime(self):
+        return self._as_of_datetime
+
+    @as_of_datetime.setter
+    def as_of_datetime(self, value):
+        if not isinstance(value, (datetime.datetime, datetime.date,)):
+            raise ValueError("Unexpected format for AsOfDateTime")
+        # TODO: should we warn for values that are greater than CreationDateTime
+        if isinstance(value, (datetime.date, datetime.datetime,)):
+            self._as_of_datetime = value.isoformat()
 
     @property
     def granularity_type(self):
@@ -83,7 +124,7 @@ class ODM(ODMElement):
 
     def build(self, builder):
         """Build XML object, return the root, this is a copy for consistency and testing"""
-        params = dict(ODMVersion="1.3",
+        params = dict(ODMVersion=self.odm_version,
                       FileType=self.filetype,
                       CreationDateTime=self.creationdatetime,
                       Originator=self.originator,
@@ -101,6 +142,9 @@ class ODM(ODMElement):
 
         if self.description:
             params['Description'] = self.description
+
+        if self.as_of_datetime:
+            params['AsOfDateTime'] = self.as_of_datetime
 
         builder.start("ODM", params)
 

@@ -130,3 +130,66 @@ class TestODM(unittest.TestCase):
         self.assertEqual(tested_1.get('SourceSystem'), tested_2.get('SourceSystem'))
         self.assertNotEqual(tested_1.get('FileOID'), tested_2.get('FileOID'))
         self.assertNotEqual(tested_1.get('CreationDateTime'), tested_2.get('CreationDateTime'))
+
+    def test_as_of_datetime_default(self):
+        """Check that when set the AsOfDateTime attribute is not set, we get nothing"""
+        obj_1 = ODM("Test User", fileoid="1234", source_system="Battlestar", source_system_version="1.04")
+        tested_1 = obj_to_doc(obj=obj_1)
+        self.assertIsNone(tested_1.get('AsOfDateTime'))
+
+    def test_as_of_datetime_set(self):
+        """Check that when set the AsOfDateTime attribute is set, we can access it"""
+        obj_2 = ODM("Test User", fileoid="1234", source_system="Battlestar", source_system_version="1.04")
+        obj_2.as_of_datetime = datetime.datetime(2016, 10, 11, 12, 11, 10)
+        tested_2 = obj_to_doc(obj=obj_2)
+        self.assertEqual("2016-10-11T12:11:10", tested_2.get('AsOfDateTime'))
+
+    def test_as_of_datetime_set_with_sensible_value(self):
+        """Check that when set the AsOfDateTime attribute is set and checked, we can access it"""
+        obj_2 = ODM("Test User", fileoid="1234", source_system="Battlestar", source_system_version="1.04")
+        with self.assertRaises(ValueError) as exc:
+            obj_2.as_of_datetime = "Three weeks ago"
+        self.assertEqual("Unexpected format for AsOfDateTime", str(exc.exception))
+
+    def test_as_of_datetime_set_on_init(self):
+        """Check that when set the AsOfDateTime attribute is set at init, we can access it"""
+        obj_2 = ODM("Test User", fileoid="1234", source_system="Battlestar",
+                    source_system_version="1.04",
+                    as_of_datetime = datetime.datetime(2016, 10, 11, 12, 11, 10))
+        tested_2 = obj_to_doc(obj=obj_2)
+        self.assertEqual("2016-10-11T12:11:10", tested_2.get('AsOfDateTime'))
+
+    def test_odm_version_accessible(self):
+        """Check that when set the ODM Version is attribute is set, we can access it"""
+        obj_1 = ODM("Test User", fileoid="1234", source_system="Battlestar", source_system_version="1.04")
+        obj_1.odm_version = '1.3.2'
+        tested_1 = obj_to_doc(obj=obj_1)
+        self.assertEqual("1.3.2", tested_1.get('ODMVersion'))
+
+    def test_odm_version_accessible_on_init(self):
+        """Check that when set the ODM Version is attribute is set in create, we can access it"""
+        obj_1 = ODM("Test User", fileoid="1234", source_system="Battlestar", source_system_version="1.04",
+                    odm_version="1.3.2")
+        tested_1 = obj_to_doc(obj=obj_1)
+        self.assertEqual("1.3.2", tested_1.get('ODMVersion'))
+
+    def test_odm_version_checked_on_init(self):
+        """Check that when set the ODM Version is attribute is set in create, we can access it"""
+        with self.assertRaises(ValueError) as exc:
+            obj_1 = ODM("Test User", fileoid="1234", source_system="Battlestar", source_system_version="1.04",
+                    odm_version="1.4.2")
+        self.assertEqual("No such supported ODMVersion '1.4.2'", str(exc.exception))
+
+    def test_odm_version_default(self):
+        """Check that when set the ODM Version is not set, we can get default value"""
+        obj_1 = ODM("Test User", fileoid="1234", source_system="Battlestar", source_system_version="1.04")
+        tested_1 = obj_to_doc(obj=obj_1)
+        self.assertEqual("1.3", tested_1.get('ODMVersion'))
+
+    def test_odm_version_verification(self):
+        """Check that when set the ODM Version is not set, we can get default value"""
+        obj_1 = ODM("Test User", fileoid="1234", source_system="Battlestar", source_system_version="1.04")
+        with self.assertRaises(ValueError) as exc:
+            obj_1.odm_version = '1.4.2'
+        self.assertEqual("No such supported ODMVersion '1.4.2'", str(exc.exception))
+
